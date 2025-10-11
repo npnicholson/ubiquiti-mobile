@@ -1,6 +1,7 @@
 {
   "domain": "ubiquiti_mobile",
   "name": "Ubiquiti Mobile",
+  "brand": "ubiquiti",
   "codeowners": [
     "@ludeeus"
   ],
