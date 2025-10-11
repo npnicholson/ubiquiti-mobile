@@ -1,46 +1,51 @@
-# Notice
+# Ubiquiti Mobile for Home Assistant
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+This custom integration authenticates against the local JSON-RPC interface of a Ubiquiti Mobile Gateway and exposes its status in Home Assistant. Once configured the integration polls the gateway every five seconds, surfaces network telemetry, and keeps GPS data in sync so you can build automations around connectivity and location.
 
-HAVE FUN! 😎
+## Features
 
-## Why?
+- `Wan Ip Address` sensor reports the public address assigned to the gateway.
+- `Lan Ip Address` sensor shows the LAN address being advertised to clients.
+- `Data Usage` sensor tracks the total bytes transferred since the gateway's last reset.
+- `Clients` sensor indicates the number of connected devices.
+- `Location` device tracker publishes GPS coordinates (latitude/longitude) when available.
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+## Requirements
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+- Local access to a Ubiquiti Mobile Gateway running firmware with the `/ubus/call` API enabled.
+- Administrator credentials for the gateway (the stock username is usually `ui`).
+- Home Assistant 2025.2.4 or newer, as defined in `hacs.json`.
+- Your Home Assistant host must be able to reach `https://<gateway-ip>` on the local network. SSL verification is skipped, so the gateway's self-signed certificate is accepted automatically.
 
-## What?
+## Installation
 
-This repository contains multiple files, here is a overview:
+### HACS (recommended)
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+- In HACS, open Integrations → ⋮ → `Custom repositories`, and add `https://github.com/npnicholson/ubiquiti-mobile` as an Integration repository.
+- Install **Ubiquiti Mobile** from the HACS Integrations catalog.
+- Restart Home Assistant to load the integration.
 
-## How?
+### Manual installation
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+- Copy `custom_components/ubiquiti_mobile` into your Home Assistant `config/custom_components` directory.
+- Restart Home Assistant.
 
-## Next steps
+## Configuration
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+- Go to Settings → Devices & Services in Home Assistant and click `+ Add Integration`.
+- Search for **Ubiquiti Mobile**.
+- Enter the gateway host or IP address (for example `192.168.1.1`), along with the username and password for your local admin account. The username defaults to `ui` in the form.
+- Submit the form to test the connection. The integration authenticates, stores the resulting session token, and creates a device for the gateway.
+- After setup you will find the sensors and device tracker listed above under the new device, which is named using the gateway's MAC address and model.
+
+The integration talks to the gateway locally and does not reach out to the UniFi cloud. Data is refreshed every five seconds through a single coordinated poll that feeds all entities.
+
+## Troubleshooting
+
+- `Invalid credentials` or `Access denied` errors mean the gateway rejected the login; verify the username/password and that the account still has API access.
+- `Failed to connect` indicates Home Assistant cannot reach the HTTPS endpoint—check network connectivity or firewalls.
+- If data stops updating after changing credentials on the gateway, remove the integration and add it again so a new session token is created.
+
+## Contributing
+
+Problems, feature requests, or pull requests are welcome. See `CONTRIBUTING.md` for the recommended development workflow.
