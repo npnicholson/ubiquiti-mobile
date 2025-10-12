@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${ROOT_DIR}"
+
+# Extract the integration version from the manifest.
+VERSION="$(python - <<'PY'
+import json
+from pathlib import Path
+
+manifest = Path("custom_components/ubiquiti_mobile/manifest.json")
+data = json.loads(manifest.read_text())
+print(data["version"])
+PY
+)"
+
+if [[ -z "${VERSION}" ]]; then
+    echo "Unable to determine version from manifest.json"
+    exit 1
+fi
+
+TAG="v${VERSION}"
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "Working tree has uncommitted changes. Commit or stash them before releasing."
+    exit 1
+fi
+
+if git rev-parse "${TAG}" >/dev/null 2>&1; then
+    echo "Tag ${TAG} already exists. Aborting."
+    exit 1
+fi
+
+echo "Pushing branch ${BRANCH}..."
+git push origin "${BRANCH}"
+
+echo "Tagging release ${TAG}..."
+git tag -a "${TAG}" -m "Ubiquiti Mobile ${VERSION}"
+git push origin "${TAG}"
+
+if command -v gh >/dev/null 2>&1; then
+    echo "Creating GitHub release ${TAG}..."
+    gh release create "${TAG}" \
+        --title "Ubiquiti Mobile ${VERSION}" \
+        --generate-notes
+else
+    echo "GitHub CLI (gh) not found; skipped creating the GitHub release."
+    echo "You can install gh (https://cli.github.com/) and rerun the script, or create the release manually."
+fi
+
+echo "Release ${TAG} created."

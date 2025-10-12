@@ -1,6 +1,10 @@
 """Module contains the uimqtt requests and responses."""
 
-from pydantic import BaseModel
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
 
 from .jsonrpc import Request
 
@@ -65,6 +69,37 @@ class GetHighInfoRequest(Request[dict[str, str]]):
     params: None = None
 
 
+class HighClientInfo(BaseModel):
+    """Represents information about a connected client."""
+
+    ip: str
+    mac: str
+    id: int
+    connection: str
+    host_name: str
+    rxPackets: int  # noqa: N815
+    txPackets: int  # noqa: N815
+    rxBytes: int  # noqa: N815
+    txBytes: int  # noqa: N815
+    rxAggrBytes: int  # noqa: N815
+    txAggrBytes: int  # noqa: N815
+    uptime: int | None = None
+    tx_rate: int | None = None
+    rx_rate: int | None = None
+    link_speed: int | None = None
+    ssid: str | None = None
+    band: str | None = None
+    channel: int | None = None
+    bandwidth: int | None = None
+    signal: int | None = None
+    mode: str | None = None
+    associated_at: int | None = None
+    rxBitRate: int | None = None  # noqa: N815
+    txBitRate: int | None = None  # noqa: N815
+    score: int | None = None
+    per: int | None = None
+
+
 class GetHighInfoResponse(BaseModel):
     """Class that reflects a response from a InfoHighDump Request."""
 
@@ -116,3 +151,27 @@ class GetHighInfoResponse(BaseModel):
     wifi_wan_status_code: int
     download_usage_avg: int
     upload_usage_avg: int
+    client_details: list[HighClientInfo] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_clients(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Collect client objects (client0, client1, ...) into client_details."""
+        if not isinstance(values, dict):
+            return values
+
+        client_entries: list[dict[str, Any]] = []
+        client_keys: list[str] = []
+
+        for key, val in values.items():
+            if key.startswith("client") and key[6:].isdigit() and isinstance(val, dict):
+                client_entries.append(val)
+                client_keys.append(key)
+
+        for key in client_keys:
+            values.pop(key)
+
+        if client_entries:
+            values["client_details"] = client_entries
+
+        return values

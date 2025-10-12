@@ -13,13 +13,25 @@ from .coordinator import UbiquitiDataUpdateCoordinator
 class UbiquitiMobileEntity(CoordinatorEntity[UbiquitiDataUpdateCoordinator]):
     """Entity class."""
 
-    def __init__(self, coordinator: UbiquitiDataUpdateCoordinator, tag: str) -> None:
+    def __init__(
+        self,
+        coordinator: UbiquitiDataUpdateCoordinator,
+        tag: str,
+        *,
+        device_info: DeviceInfo | None = None,
+    ) -> None:
         """Initialize."""
         super().__init__(coordinator)
 
         state_data = UbiquitiMobileStateData(**coordinator.data)
 
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{tag}"
+        if device_info is not None:
+            # Child entities (e.g. per-client sensors) can share a specific device
+            # entry.
+            self._attr_device_info = device_info
+            return
+
         self._attr_device_info = DeviceInfo(
             identifiers={
                 (
